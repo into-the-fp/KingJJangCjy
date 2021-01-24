@@ -12,6 +12,7 @@ repositories {
 dependencies {
 
 
+    implementation("io.vavr:vavr:0.10.3")
     implementation("net.jodah:typetools:0.6.2")
     compileOnly("org.projectlombok:lombok:1.18.16")
     annotationProcessor("org.projectlombok:lombok:1.18.16")

@@ -1,64 +1,45 @@
 package me.kingcjy.order.domain;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import io.vavr.control.Option;
+import lombok.Data;
 import me.kingcjy.common.Money;
-import me.kingcjy.common.event.Events;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Created by KingCjy on 2021/01/07
- * Github: https://github.com/KingCjy
- */
-@Getter
-@ToString
-@EqualsAndHashCode
+@Data
 public class Order {
+    private final OrderCode orderCode;
+    private final long userId;
+    private final List<OrderItem> orderItems;
+    private final Money orderAmount;
+    private final OrderStatus status;
+    private final LocalDateTime orderedAt;
 
-    private Long id;
-    private OrderCode orderCode;
-
-    private long userId;
-
-    private List<OrderItem> orderItems;
-
-    private Money orderAmount;
-
-    private OrderStatus status;
-
-    private LocalDateTime orderedAt;
-
-    public Order(OrderCode orderCode, long userId, List<OrderItem> orderItems) {
+    public Order(OrderCode orderCode, long userId, List<OrderItem> orderItems, Money orderAmount, OrderStatus status, LocalDateTime orderedAt) {
         this.orderCode = orderCode;
         this.userId = userId;
         this.orderItems = orderItems;
-        this.status = OrderStatus.PAYMENT_WAITING;
-        this.orderedAt = LocalDateTime.now();
+        this.orderAmount = orderAmount;
+        this.status = status;
+        this.orderedAt = orderedAt;
+    }
 
-        this.orderAmount = orderItems.stream()
+    public static Money calculateAmount(List<OrderItem> orderItems) {
+        return orderItems.stream()
                 .map(OrderItem::calculateOrderAmount)
                 .reduce(new Money(0), Money::plus);
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public static Order from(OrderCode orderCode, long userId, List<OrderItem> orderItems) {
+        return new Order(orderCode, userId, orderItems, calculateAmount(orderItems), OrderStatus.PAYMENT_WAITING, LocalDateTime.now());
     }
 
-    public void cancel() {
-        verifyNotYetShipped();
-        this.status = OrderStatus.CANCELED;
-        Events.raise(new OrderCanceledEvent(orderCode));
+    public Order setStatus(OrderStatus status) {
+        return new Order(orderCode, userId, orderItems, orderAmount, status, orderedAt);
     }
 
-    private void verifyNotYetShipped() {
-        if (!isNotYetShipped())
-            throw new AlreadyShippedException();
-    }
-
-    public boolean isNotYetShipped() {
-        return status == OrderStatus.PAYMENT_WAITING || status == OrderStatus.PREPARING;
+    public Option<Order> cancel() {
+        return status.isNotYetShipped() ? Option.none() : Option.of(setStatus(OrderStatus.CANCELED));
     }
 }

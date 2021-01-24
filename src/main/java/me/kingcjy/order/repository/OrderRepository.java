@@ -1,5 +1,9 @@
 package me.kingcjy.order.repository;
 
+import io.vavr.Tuple2;
+import io.vavr.collection.Map;
+import io.vavr.control.Option;
+import me.kingcjy.order.domain.IdentifiedDomain;
 import me.kingcjy.order.domain.Order;
 import me.kingcjy.order.domain.OrderCode;
 
@@ -12,21 +16,9 @@ import java.util.Optional;
  */
 public class OrderRepository {
 
-    private long seq = 0;
-    private HashMap<Long, Order> orders = new HashMap<>();
-
-    public Order save(Order order) {
-        order.setId(++seq);
-        return orders.put(order.getId(), order);
-    }
-
-    public Optional<Order> findById(long id) {
-        return Optional.ofNullable(orders.get(id));
-    }
-
-    public Optional<Order> findByOrderCode(OrderCode orderCode) {
-        return this.orders.values().stream()
-                .filter(order -> orderCode.equals(order.getOrderCode()))
-                .findFirst();
+    public static Option<Order> findByOrderCode(Map<Long, IdentifiedDomain<Order>> orders, OrderCode code) {
+        return orders.find(pair -> pair._2.getDomain().getOrderCode().equals(code))
+                .map(Tuple2::_2)
+                .map(IdentifiedDomain::getDomain);
     }
 }
